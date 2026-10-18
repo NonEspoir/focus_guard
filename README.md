@@ -14,21 +14,23 @@ macOS 菜单栏自律工具：专注期间拦截摸鱼 App 和网站。
 
 数据保存在 `~/Library/Application Support/FocusGuard/`。
 
-## 构建
+## 下载使用
+
+到 [Releases](https://github.com/NonEspoir/focus_guard/releases) 下载最新的 `FocusGuard-x.y.z.zip`，解压后拖进「应用程序」。需要 macOS 14 及以上，支持 Apple 芯片和 Intel。
+
+App 没有经过 Apple 公证，第一次打开会被系统拦截，需要到「系统设置 → 隐私与安全性」点「仍要打开」。完整步骤、黑名单设置和浏览器权限说明见 **[使用教程](docs/使用教程.md)**。
+
+## 从源码构建
 
 只需要 Command Line Tools，不需要 Xcode：
 
 ```bash
 ./scripts/build_app.sh             # 只打包到 build/
 ./scripts/build_app.sh --install   # 打包并安装到 /Applications（启动台可见）
+./scripts/build_app.sh --release   # 打包通用二进制并压缩成 zip，用于发布
 ```
 
-安装后可以在「系统设置 → 通用 → 登录项」里添加 FocusGuard，实现开机启动。
-
-## 权限
-
-- 关闭和隐藏 App 不需要特殊权限。
-- 网站拦截第一次触发时，系统会询问是否允许 FocusGuard 控制浏览器，请点「允许」。如果之前点了拒绝，可以到「系统设置 → 隐私与安全性 → 自动化」里重新打开。
+发布新版本时，先修改 `scripts/build_app.sh` 里的 `VERSION`。
 
 ## 待办
 

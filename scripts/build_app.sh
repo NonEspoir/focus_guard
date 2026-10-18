@@ -1,7 +1,13 @@
 #!/bin/bash
 # 编译并打包成 FocusGuard.app（无需 Xcode）。
+#   ./scripts/build_app.sh             只打包到 build/
+#   ./scripts/build_app.sh --install   打包并安装到 /Applications
+#   ./scripts/build_app.sh --release   打包通用二进制（Apple 芯片 + Intel）并压缩成 zip，用于发布
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+VERSION="0.1.0"
+MODE="${1:-}"
 
 APP="build/FocusGuard.app"
 rm -rf "$APP"
@@ -23,13 +29,24 @@ YAML
 fi
 
 # 直接用 swiftc 编译（不依赖 Xcode / SwiftPM）
-swiftc -O -parse-as-library ${EXTRA_FLAGS[@]+"${EXTRA_FLAGS[@]}"} \
-    -target "$(uname -m)-apple-macosx14.0" \
-    -module-name FocusGuard \
-    Sources/FocusGuard/*.swift \
-    -o "$APP/Contents/MacOS/FocusGuard"
+compile() {
+    swiftc -O -parse-as-library ${EXTRA_FLAGS[@]+"${EXTRA_FLAGS[@]}"} \
+        -target "$1-apple-macosx14.0" \
+        -module-name FocusGuard \
+        Sources/FocusGuard/*.swift \
+        -o "$2"
+}
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+if [[ "$MODE" == "--release" ]]; then
+    mkdir -p build/arch
+    compile arm64 build/arch/FocusGuard-arm64
+    compile x86_64 build/arch/FocusGuard-x86_64
+    lipo -create build/arch/FocusGuard-arm64 build/arch/FocusGuard-x86_64 -output "$APP/Contents/MacOS/FocusGuard"
+else
+    compile "$(uname -m)" "$APP/Contents/MacOS/FocusGuard"
+fi
+
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -39,7 +56,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIdentifier</key><string>local.focusguard</string>
     <key>CFBundleExecutable</key><string>FocusGuard</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
@@ -54,9 +71,17 @@ codesign --force --sign - "$APP"
 echo "已生成 $APP"
 
 # --install：安装到 /Applications，这样启动台和 Spotlight 里都能找到
-if [[ "${1:-}" == "--install" ]]; then
+if [[ "$MODE" == "--install" ]]; then
     osascript -e 'quit app "FocusGuard"' 2>/dev/null || true
     rm -rf /Applications/FocusGuard.app
     cp -R "$APP" /Applications/
     echo "已安装到 /Applications/FocusGuard.app"
+fi
+
+# --release：压缩成 zip（ditto 会保留签名和扩展属性）
+if [[ "$MODE" == "--release" ]]; then
+    ZIP="build/FocusGuard-$VERSION.zip"
+    rm -f "$ZIP"
+    ditto -c -k --keepParent "$APP" "$ZIP"
+    echo "已生成 ${ZIP}（$(lipo -archs "$APP/Contents/MacOS/FocusGuard")）"
 fi
