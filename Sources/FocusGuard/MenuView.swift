@@ -103,7 +103,7 @@ struct MenuView: View {
                 Text("开始").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(store.config.blockedApps.isEmpty && store.config.blockedDomains.isEmpty)
+            .disabled(store.config.hasNoRules)
         }
     }
 }

@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     var body: some View {
         TabView {
-            AppsTab().tabItem { Label("黑名单", systemImage: "app.badge") }
+            AppsTab().tabItem { Label("App", systemImage: "app.badge") }
             DomainsTab().tabItem { Label("网站", systemImage: "globe") }
             OptionsTab().tabItem { Label("选项", systemImage: "slider.horizontal.3") }
             HistoryTab().tabItem { Label("记录", systemImage: "list.bullet.rectangle") }
@@ -15,14 +15,54 @@ struct SettingsView: View {
     }
 }
 
-/// 硬核会话期间只能加规则、不能删规则或放宽选项。
+/// 硬核会话期间只能收紧规则：黑名单只能加，白名单只能删，不能放宽选项。
 @MainActor private var locked: Bool { Store.shared.isHardLocked }
+@MainActor private func canAdd(_ mode: ListMode) -> Bool { !locked || mode == .blacklist }
+@MainActor private func canRemove(_ mode: ListMode) -> Bool { !locked || mode == .whitelist }
 
 private struct LockedHint: View {
+    var mode: ListMode?
+
     var body: some View {
         if locked {
-            Label("硬核专注中：只能添加，不能删除或放宽", systemImage: "lock.fill")
-                .font(.caption).foregroundStyle(.orange)
+            Label(text, systemImage: "lock.fill").font(.caption).foregroundStyle(.orange)
+        }
+    }
+
+    private var text: String {
+        switch mode {
+        case .blacklist: "硬核专注中：黑名单只能添加，不能删除"
+        case .whitelist: "硬核专注中：白名单只能删除，不能添加"
+        case nil: "硬核专注中：不能放宽选项"
+        }
+    }
+}
+
+/// 名单模式切换。切换后另一份名单的数据保留，只是隐藏且不生效。专注期间（任何模式）都不能切换。
+private struct ModePicker: View {
+    @Binding var mode: ListMode
+    let blacklistHint: String
+    let whitelistHint: String
+
+    private var inSession: Bool { Store.shared.activeSession != nil }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Picker("模式", selection: $mode) {
+                    ForEach(ListMode.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 160)
+                .disabled(inSession)
+                if inSession {
+                    Label("专注中不能切换", systemImage: "lock.fill")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Text(mode == .blacklist ? blacklistHint : whitelistHint)
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
 }
@@ -31,18 +71,23 @@ private struct AppsTab: View {
     private var store: Store { Store.shared }
 
     var body: some View {
+        @Bindable var store = store
+        let mode = store.config.appListMode
         VStack(alignment: .leading) {
-            LockedHint()
+            ModePicker(mode: $store.config.appListMode,
+                       blacklistHint: "专注时只拦截下面列出的 App。",
+                       whitelistHint: "专注时只允许下面列出的 App，其它一律拦截（访达、系统设置始终允许）。用白名单时记得把浏览器也加进来。")
+            LockedHint(mode: mode)
             List {
-                ForEach(store.config.blockedApps) { app in
+                ForEach(store.config.apps) { app in
                     HStack {
                         Image(nsImage: icon(for: app.bundleID)).resizable().frame(width: 20, height: 20)
                         Text(app.name)
                         Spacer()
                         Text(app.bundleID).font(.caption).foregroundStyle(.secondary)
-                        if !locked {
+                        if canRemove(mode) {
                             Button(role: .destructive) {
-                                store.config.blockedApps.removeAll { $0 == app }
+                                store.config.apps.removeAll { $0 == app }
                             } label: { Image(systemName: "minus.circle") }
                             .buttonStyle(.borderless)
                         }
@@ -51,6 +96,7 @@ private struct AppsTab: View {
             }
             HStack {
                 Button("从「应用程序」添加…", action: pickApps)
+                    .disabled(!canAdd(mode))
                 Menu("从运行中的 App 添加") {
                     ForEach(runningApps, id: \.bundleIdentifier) { app in
                         Button(app.localizedName ?? app.bundleIdentifier ?? "") {
@@ -59,6 +105,7 @@ private struct AppsTab: View {
                     }
                 }
                 .fixedSize()
+                .disabled(!canAdd(mode))
             }
         }
     }
@@ -93,8 +140,8 @@ private struct AppsTab: View {
 
     private func add(bundleID: String?, name: String?) {
         guard let bundleID, bundleID != Bundle.main.bundleIdentifier,
-              !store.config.blockedApps.contains(where: { $0.bundleID == bundleID }) else { return }
-        store.config.blockedApps.append(BlockedApp(bundleID: bundleID, name: name ?? bundleID))
+              !store.config.apps.contains(where: { $0.bundleID == bundleID }) else { return }
+        store.config.apps.append(AppEntry(bundleID: bundleID, name: name ?? bundleID))
     }
 }
 
@@ -103,16 +150,21 @@ private struct DomainsTab: View {
     private var store: Store { Store.shared }
 
     var body: some View {
+        @Bindable var store = store
+        let mode = store.config.domainListMode
         VStack(alignment: .leading) {
-            LockedHint()
+            ModePicker(mode: $store.config.domainListMode,
+                       blacklistHint: "专注时只拦截下面列出的网站。",
+                       whitelistHint: "专注时只允许下面列出的网站，其它网页一律拦截（localhost 始终允许）。")
+            LockedHint(mode: mode)
             List {
-                ForEach(store.config.blockedDomains, id: \.self) { domain in
+                ForEach(store.config.domains, id: \.self) { domain in
                     HStack {
                         Text(domain)
                         Spacer()
-                        if !locked {
+                        if canRemove(mode) {
                             Button(role: .destructive) {
-                                store.config.blockedDomains.removeAll { $0 == domain }
+                                store.config.domains.removeAll { $0 == domain }
                             } label: { Image(systemName: "minus.circle") }
                             .buttonStyle(.borderless)
                         }
@@ -120,9 +172,12 @@ private struct DomainsTab: View {
                 }
             }
             HStack {
-                TextField("例如 bilibili.com（会同时匹配子域名）", text: $input)
+                TextField(mode == .blacklist ? "例如 bilibili.com（会同时匹配子域名）" : "例如 github.com（会同时匹配子域名）",
+                          text: $input)
                     .onSubmit(add)
+                    .disabled(!canAdd(mode))
                 Button("添加", action: add)
+                    .disabled(!canAdd(mode))
             }
             Text("支持 Safari、Chrome、Edge、Brave、Arc。首次拦截时系统会询问是否允许控制浏览器，请点「允许」。")
                 .font(.caption).foregroundStyle(.secondary)
@@ -130,9 +185,9 @@ private struct DomainsTab: View {
     }
 
     private func add() {
-        guard let domain = normalizeDomain(input) else { return }
-        if !store.config.blockedDomains.contains(domain) {
-            store.config.blockedDomains.append(domain)
+        guard canAdd(store.config.domainListMode), let domain = normalizeDomain(input) else { return }
+        if !store.config.domains.contains(domain) {
+            store.config.domains.append(domain)
         }
         input = ""
     }

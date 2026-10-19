@@ -65,18 +65,19 @@ final class Enforcer {
             .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != ownBundleID && $0 != frontmost }
         let apps = (frontmost.map { [$0] } ?? []).filter { $0.bundleIdentifier != ownBundleID } + others
 
+        let config = store.config
         for app in apps {
             guard let bundleID = app.bundleIdentifier, !isAllowed(bundleID) else { continue }
-            if let blocked = store.config.blockedApps.first(where: { $0.bundleID == bundleID }) {
-                // 提醒模式下已隐藏的 App 不打扰；硬核模式下只要在运行就关闭（包括后台播放）。
-                if strictness == .hard || !app.isHidden {
-                    return .app(app, name: blocked.name)
+            if !config.isAppPermitted(bundleID) {
+                // 已隐藏的 App 一般不打扰；黑名单 + 硬核模式下只要在运行就关闭（包括后台播放）。
+                // 白名单模式只管看得见的 App，避免开始专注时把后台所有 App 一次性关掉。
+                if !app.isHidden || (strictness == .hard && config.appListMode == .blacklist) {
+                    let name = config.apps.first { $0.bundleID == bundleID }?.name ?? app.localizedName ?? bundleID
+                    return .app(app, name: name)
                 }
             } else if let browser = Browser(bundleID: bundleID), !app.isHidden {
                 for tab in browser.visibleTabs() {
-                    guard let host = tab.url.host?.lowercased(),
-                          let domain = store.config.blockedDomains.first(where: { domainMatches(host: host, domain: $0) }),
-                          !isAllowed(domain) else { continue }
+                    guard let domain = config.blockedDomain(for: tab.url), !isAllowed(domain) else { continue }
                     return .web(browser, windowID: tab.windowID, domain: domain)
                 }
             }
