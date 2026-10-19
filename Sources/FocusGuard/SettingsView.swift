@@ -48,18 +48,17 @@ private struct ModePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Picker("模式", selection: $mode) {
-                    ForEach(ListMode.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(width: 160)
-                .disabled(inSession)
-                if inSession {
-                    Label("专注中不能切换", systemImage: "lock.fill")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+            Picker("模式", selection: $mode) {
+                ForEach(ListMode.allCases) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 160)
+            .disabled(inSession)
+            .frame(maxWidth: .infinity)
+            if inSession {
+                Label("专注中不能切换黑名单 / 白名单", systemImage: "lock.fill")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Text(mode == .blacklist ? blacklistHint : whitelistHint)
                 .font(.caption).foregroundStyle(.secondary)
