@@ -24,12 +24,14 @@ struct AppEntry: Codable, Hashable, Identifiable {
     var bundleID: String
     var name: String
     var id: String { bundleID }
+
+    static let activityMonitor = AppEntry(bundleID: "com.apple.ActivityMonitor", name: "活动监视器")
 }
 
 /// App 和网站各自有黑名单、白名单两份数据，切换模式只改变生效（和显示）的那份，另一份保留不动。
 struct Config: Codable {
     var appListMode: ListMode = .blacklist
-    var blockedApps: [AppEntry] = []
+    var blockedApps: [AppEntry] = [.activityMonitor]
     var allowedApps: [AppEntry] = []
     var domainListMode: ListMode = .blacklist
     var blockedDomains: [String] = ["bilibili.com", "weibo.com", "douyin.com", "xiaohongshu.com", "youtube.com"]
@@ -38,6 +40,11 @@ struct Config: Codable {
     var defaultMinutes: Int = 25
     var gentleWaitSeconds: Int = 10
     var allowMinutes: Int = 5
+    var showInDock: Bool = false
+    /// 已经补充过的默认项版本。新增默认黑名单项时递增，老用户升级后会补上一次，之后删掉也不会再加回来。
+    var defaultsVersion: Int = Config.currentDefaultsVersion
+
+    static let currentDefaultsVersion = 1
 
     /// 白名单模式下也始终允许的 App，避免把访达和系统设置关掉。
     static let alwaysAllowedApps: Set<String> = ["com.apple.finder", "com.apple.systempreferences"]
@@ -101,6 +108,14 @@ extension Config {
         defaultMinutes = try c.decodeIfPresent(Int.self, forKey: .defaultMinutes) ?? d.defaultMinutes
         gentleWaitSeconds = try c.decodeIfPresent(Int.self, forKey: .gentleWaitSeconds) ?? d.gentleWaitSeconds
         allowMinutes = try c.decodeIfPresent(Int.self, forKey: .allowMinutes) ?? d.allowMinutes
+        showInDock = try c.decodeIfPresent(Bool.self, forKey: .showInDock) ?? d.showInDock
+        defaultsVersion = try c.decodeIfPresent(Int.self, forKey: .defaultsVersion) ?? 0
+
+        // 版本 1：黑名单默认加入活动监视器（防止在里面强制退出 FocusGuard）
+        if defaultsVersion < 1, !blockedApps.contains(where: { $0.bundleID == AppEntry.activityMonitor.bundleID }) {
+            blockedApps.append(.activityMonitor)
+        }
+        defaultsVersion = Config.currentDefaultsVersion
     }
 }
 

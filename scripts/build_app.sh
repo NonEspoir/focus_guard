@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 MODE="${1:-}"
 
 APP="build/FocusGuard.app"

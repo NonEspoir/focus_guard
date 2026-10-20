@@ -17,6 +17,18 @@ final class WindowManager {
         settings = show(settings, title: "FocusGuard 设置", view: SettingsView())
     }
 
+    /// 按设置决定是否在程序坞显示图标。切换后把当前窗口重新带到前台，避免设置窗口被藏到后面。
+    func applyDockVisibility() {
+        let policy: NSApplication.ActivationPolicy = Store.shared.config.showInDock ? .regular : .accessory
+        guard NSApp.activationPolicy() != policy else { return }
+        let key = NSApp.keyWindow
+        NSApp.setActivationPolicy(policy)
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            key?.makeKeyAndOrderFront(nil)
+        }
+    }
+
     private func show(_ existing: NSWindow?, title: String, view: some View) -> NSWindow {
         let window = existing ?? {
             let w = NSWindow(contentViewController: NSHostingController(rootView: view))

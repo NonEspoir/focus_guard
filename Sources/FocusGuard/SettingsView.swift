@@ -205,6 +205,12 @@ private struct OptionsTab: View {
                 Stepper("每次放行 \(store.config.allowMinutes) 分钟",
                         value: $store.config.allowMinutes, in: 1...(locked ? store.config.allowMinutes : 60))
             }
+            Section("外观") {
+                Toggle("在程序坞中显示图标", isOn: $store.config.showInDock)
+                    .onChange(of: store.config.showInDock) { WindowManager.shared.applyDockVisibility() }
+                Text("关闭时只在菜单栏显示。打开后可以点程序坞图标呼出主面板。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("开机启动") {
                 Text("系统设置 → 通用 → 登录项 → 添加 FocusGuard.app")
                     .font(.caption).foregroundStyle(.secondary)

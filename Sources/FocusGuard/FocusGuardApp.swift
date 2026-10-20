@@ -17,14 +17,14 @@ struct FocusGuardApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
         MainActor.assumeIsolated {
+            NSApp.setActivationPolicy(Store.shared.config.showInDock ? .regular : .accessory)
             Enforcer.shared.start()
             WindowManager.shared.showMain()
         }
     }
 
-    /// 已在运行时再从启动台/Spotlight/Finder 打开，弹出主面板（菜单栏图标被挤掉时的入口）。
+    /// 已在运行时再从启动台/Spotlight/Finder 打开，或点击程序坞图标，弹出主面板（菜单栏图标被挤掉时的入口）。
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         MainActor.assumeIsolated { WindowManager.shared.showMain() }
         return false
