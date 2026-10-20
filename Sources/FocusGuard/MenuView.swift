@@ -31,7 +31,7 @@ struct MenuView: View {
             }
         }
         .padding()
-        .frame(width: 280)
+        .frame(width: 320)
         .onReceive(timer) { now = $0 }
     }
 
@@ -77,6 +77,12 @@ struct MenuView: View {
         }
     }
 
+    static let minuteRange = 1...480
+
+    private func clampMinutes() {
+        minutes = min(max(minutes, Self.minuteRange.lowerBound), Self.minuteRange.upperBound)
+    }
+
     private var trimmedReason: String { endReason.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     private func resetEnding() {
@@ -87,7 +93,22 @@ struct MenuView: View {
     private var startSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("开始专注").font(.headline)
-            Stepper("\(minutes) 分钟", value: $minutes, in: 5...240, step: 5)
+            HStack(spacing: 6) {
+                TextField("分钟", value: $minutes, format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 56)
+                    .onSubmit(clampMinutes)
+                Text("分钟")
+                Stepper("", value: $minutes, in: Self.minuteRange, step: 5)
+                    .labelsHidden()
+                Spacer()
+                ForEach([25, 45, 60, 90], id: \.self) { preset in
+                    Button("\(preset)") { minutes = preset }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+            }
             Picker("模式", selection: $strictness) {
                 ForEach(Strictness.allCases) { Text($0.shortLabel).tag($0) }
             }
@@ -95,6 +116,7 @@ struct MenuView: View {
             .labelsHidden()
             Text(strictness.label).font(.caption).foregroundStyle(.secondary)
             Button {
+                clampMinutes()
                 store.startSession(minutes: minutes, strictness: strictness)
                 store.config.defaultMinutes = minutes
                 store.config.strictness = strictness
