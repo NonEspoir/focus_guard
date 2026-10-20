@@ -7,6 +7,12 @@
 <p align="center">macOS 菜单栏自律工具：专注期间拦截摸鱼 App 和网站。</p>
 
 <p align="center">
+  <a href="https://github.com/NonEspoir/focus_guard/releases/latest"><b>⬇️ 下载最新版</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/使用教程.md">使用教程</a>
+</p>
+
+<p align="center">
   <img src="docs/images/panel-idle.png" width="340" alt="主面板">
   <img src="docs/images/settings-apps.png" width="440" alt="App 黑名单设置">
 </p>
