@@ -11,11 +11,9 @@ final class Store {
     var session: FocusSession? { didSet { save(session, to: "session.json") } }
     private(set) var events: [InterceptEvent]
 
-    /// 环境变量 FOCUSGUARD_DATA_DIR 可指定其它数据目录（截图脚本用演示数据，不碰真实配置）。
     private static let dir: URL = {
-        let url = ProcessInfo.processInfo.environment["FOCUSGUARD_DATA_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
-            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("FocusGuard", isDirectory: true)
+        let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("FocusGuard", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }()

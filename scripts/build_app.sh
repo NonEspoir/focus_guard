@@ -3,6 +3,7 @@
 #   ./scripts/build_app.sh             只打包到 build/
 #   ./scripts/build_app.sh --install   打包并安装到 /Applications
 #   ./scripts/build_app.sh --release   打包通用二进制（Apple 芯片 + Intel）并压缩成 zip，用于发布
+#   ./scripts/build_app.sh --icon      重新生成 Resources/ 里的 App 图标
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -11,7 +12,7 @@ MODE="${1:-}"
 
 APP="build/FocusGuard.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 # 部分 Command Line Tools 升级后会残留旧的 usr/include/swift/module.modulemap，
 # 与新的 bridging.modulemap 重复定义 SwiftBridging，导致所有框架都无法导入。
@@ -37,6 +38,15 @@ compile() {
         -o "$2"
 }
 
+if [[ "$MODE" == "--icon" ]]; then
+    swiftc ${EXTRA_FLAGS[@]+"${EXTRA_FLAGS[@]}"} scripts/make_icon.swift -o build/make_icon
+    ICONSET="$(build/make_icon Resources)"
+    iconutil -c icns "$ICONSET" -o Resources/AppIcon.icns
+    rm -rf "$ICONSET"
+    echo "已生成 Resources/AppIcon.icns 和 Resources/logo.png"
+    exit 0
+fi
+
 if [[ "$MODE" == "--release" ]]; then
     mkdir -p build/arch
     compile arm64 build/arch/FocusGuard-arm64
@@ -55,6 +65,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleDisplayName</key><string>FocusGuard</string>
     <key>CFBundleIdentifier</key><string>local.focusguard</string>
     <key>CFBundleExecutable</key><string>FocusGuard</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>1</string>
@@ -65,6 +76,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 
 # ad-hoc 签名，让「自动化」权限能稳定记住这个 App
 codesign --force --sign - "$APP"

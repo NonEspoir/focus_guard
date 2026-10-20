@@ -1,6 +1,10 @@
-# FocusGuard
+<p align="center">
+  <img src="Resources/logo.png" width="128" alt="FocusGuard logo">
+</p>
 
-macOS 菜单栏自律工具：专注期间拦截摸鱼 App 和网站。
+<h1 align="center">FocusGuard</h1>
+
+<p align="center">macOS 菜单栏自律工具：专注期间拦截摸鱼 App 和网站。</p>
 
 <p align="center">
   <img src="docs/images/panel-idle.png" width="340" alt="主面板">
@@ -66,7 +70,6 @@ macOS 菜单栏自律工具：专注期间拦截摸鱼 App 和网站。
 ./scripts/build_app.sh             # 只打包到 build/
 ./scripts/build_app.sh --install   # 打包并安装到 /Applications（启动台可见）
 ./scripts/build_app.sh --release   # 打包通用二进制并压缩成 zip，用于发布
-./scripts/make_screenshots.sh      # 用演示数据重新生成 docs/images/ 里的截图
 ```
 
 发布新版本时，先修改 `scripts/build_app.sh` 里的 `VERSION`。
