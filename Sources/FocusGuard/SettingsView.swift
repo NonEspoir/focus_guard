@@ -3,12 +3,20 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
+    enum Tab: Hashable { case apps, domains, options, history }
+
+    @State private var tab: Tab
+
+    init(tab: Tab = .apps) {
+        _tab = State(initialValue: tab)
+    }
+
     var body: some View {
-        TabView {
-            AppsTab().tabItem { Label("App", systemImage: "app.badge") }
-            DomainsTab().tabItem { Label("网站", systemImage: "globe") }
-            OptionsTab().tabItem { Label("选项", systemImage: "slider.horizontal.3") }
-            HistoryTab().tabItem { Label("记录", systemImage: "list.bullet.rectangle") }
+        TabView(selection: $tab) {
+            AppsTab().tabItem { Label("App", systemImage: "app.badge") }.tag(Tab.apps)
+            DomainsTab().tabItem { Label("网站", systemImage: "globe") }.tag(Tab.domains)
+            OptionsTab().tabItem { Label("选项", systemImage: "slider.horizontal.3") }.tag(Tab.options)
+            HistoryTab().tabItem { Label("记录", systemImage: "list.bullet.rectangle") }.tag(Tab.history)
         }
         .frame(width: 480, height: 420)
         .padding()

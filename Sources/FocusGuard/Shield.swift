@@ -62,7 +62,7 @@ private struct NoticeView: View {
     }
 }
 
-private struct PromptView: View {
+struct PromptView: View {
     let name: String
     let waitSeconds: Int
     let allowMinutes: Int

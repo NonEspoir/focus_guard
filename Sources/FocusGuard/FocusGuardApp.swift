@@ -1,7 +1,9 @@
 import AppKit
 import SwiftUI
 
+#if !SCREENSHOTS
 @main
+#endif
 struct FocusGuardApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
@@ -36,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-private struct MenuBarLabel: View {
+struct MenuBarLabel: View {
     @State private var now = Date()
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
